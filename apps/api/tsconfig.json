@@ -1,0 +1,12 @@
+{
+  "extends": "@entrego/config/tsconfig/nestjs.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "paths": {
+      "@entrego/shared": ["../../packages/shared/src/index.ts"]
+    }
+  },
+  "include": ["src", "prisma/seed.ts"],
+  "exclude": ["node_modules", "dist"]
+}

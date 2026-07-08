@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: entrego_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: entrego
+      POSTGRES_PASSWORD: entrego_local
+      POSTGRES_DB: entrego_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U entrego -d entrego_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: entrego_redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  localstack:
+    image: localstack/localstack:3
+    container_name: entrego_localstack
+    restart: unless-stopped
+    environment:
+      SERVICES: s3
+      DEFAULT_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
+    ports:
+      - "4566:4566"
+    volumes:
+      - localstack_data:/var/lib/localstack
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:4566/_localstack/health | grep '\"s3\": \"available\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  stripe-cli:
+    image: stripe/stripe-cli:latest
+    container_name: entrego_stripe_cli
+    restart: unless-stopped
+    command: listen --forward-to http://host.docker.internal:3001/api/v1/webhooks/stripe
+    environment:
+      STRIPE_API_KEY: ${STRIPE_SECRET_KEY:-sk_test_placeholder}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    profiles:
+      - stripe
+
+volumes:
+  postgres_data:
+  redis_data:
+  localstack_data:
